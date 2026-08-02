@@ -6,7 +6,7 @@ import pickle
 # Load Model
 # ======================================================
 
-with open("Models/model.pkl", "rb") as file:
+with open("models/model.pkl", "rb") as file:
     model = pickle.load(file)
 
 # ======================================================
