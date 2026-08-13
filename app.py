@@ -1,9 +1,13 @@
-
+# ==========================================
+# Credit Card Default Risk Prediction
+# Beginner-Level Streamlit Application
+# ==========================================
 
 import streamlit as st
 import pandas as pd
 import numpy as np
 import pickle
+import os
 
 
 # ==========================================
@@ -18,30 +22,89 @@ st.set_page_config(
 
 
 # ==========================================
-# Load Trained Model
+# File Paths
+# ==========================================
+
+MODEL_PATH = os.path.join(
+    os.path.dirname(__file__),
+    "models",
+    "model.pkl"
+)
+
+FEATURE_COLUMNS_PATH = os.path.join(
+    os.path.dirname(__file__),
+    "models",
+    "feature_columns.pkl"
+)
+
+
+# ==========================================
+# Load Model
 # ==========================================
 
 @st.cache_resource
 def load_model():
 
-    with open("Models/model.pkl", "rb") as file:
+    with open(MODEL_PATH, "rb") as file:
         model = pickle.load(file)
 
     return model
 
 
-model = load_model()
+# ==========================================
+# Load Feature Columns
+# ==========================================
+
+@st.cache_resource
+def load_feature_columns():
+
+    with open(FEATURE_COLUMNS_PATH, "rb") as file:
+        feature_columns = pickle.load(file)
+
+    return feature_columns
 
 
 # ==========================================
-# Page Title
+# Load Saved Files
+# ==========================================
+
+try:
+
+    model = load_model()
+
+    feature_columns = load_feature_columns()
+
+except FileNotFoundError:
+
+    st.error(
+        "Model files were not found. "
+        "Please check the models folder."
+    )
+
+    st.stop()
+
+except Exception as e:
+
+    st.error("Unable to load the trained model.")
+
+    st.code(str(e))
+
+    st.stop()
+
+
+# ==========================================
+# Title
 # ==========================================
 
 st.title("💳 Credit Card Default Risk Prediction")
 
 st.write(
-    "Enter the customer's financial and repayment information "
-    "to predict the risk of defaulting on the next payment."
+    """
+This application predicts whether a credit card customer
+is likely to default on their next payment using their
+demographic information, repayment history, billing history,
+and payment history.
+"""
 )
 
 st.markdown("---")
@@ -82,7 +145,7 @@ with col3:
         "Sex",
         options=[1, 2],
         format_func=lambda x:
-            "Male" if x == 1 else "Female"
+        "Male" if x == 1 else "Female"
     )
 
 
@@ -126,10 +189,11 @@ st.header("📅 Repayment History")
 
 st.info(
     """
-Repayment status represents the customer's payment history.
-Higher values generally indicate greater payment delays.
+PAY values describe the customer's repayment status.
+Higher positive values generally indicate payment delays.
 """
 )
+
 
 col1, col2, col3 = st.columns(3)
 
@@ -198,12 +262,13 @@ with col3:
 
 
 # ==========================================
-# Billing Amounts
+# Billing History
 # ==========================================
 
 st.markdown("---")
 
 st.header("💰 Six-Month Billing History")
+
 
 col1, col2, col3 = st.columns(3)
 
@@ -211,12 +276,12 @@ col1, col2, col3 = st.columns(3)
 with col1:
 
     bill_amt1 = st.number_input(
-        "Bill Amount 1",
+        "BILL_AMT1",
         value=10000.0
     )
 
     bill_amt2 = st.number_input(
-        "Bill Amount 2",
+        "BILL_AMT2",
         value=10000.0
     )
 
@@ -224,12 +289,12 @@ with col1:
 with col2:
 
     bill_amt3 = st.number_input(
-        "Bill Amount 3",
+        "BILL_AMT3",
         value=10000.0
     )
 
     bill_amt4 = st.number_input(
-        "Bill Amount 4",
+        "BILL_AMT4",
         value=10000.0
     )
 
@@ -237,23 +302,24 @@ with col2:
 with col3:
 
     bill_amt5 = st.number_input(
-        "Bill Amount 5",
+        "BILL_AMT5",
         value=10000.0
     )
 
     bill_amt6 = st.number_input(
-        "Bill Amount 6",
+        "BILL_AMT6",
         value=10000.0
     )
 
 
 # ==========================================
-# Payment Amounts
+# Payment History
 # ==========================================
 
 st.markdown("---")
 
 st.header("💵 Six-Month Payment History")
+
 
 col1, col2, col3 = st.columns(3)
 
@@ -261,13 +327,13 @@ col1, col2, col3 = st.columns(3)
 with col1:
 
     pay_amt1 = st.number_input(
-        "Payment Amount 1",
+        "PAY_AMT1",
         min_value=0.0,
         value=2000.0
     )
 
     pay_amt2 = st.number_input(
-        "Payment Amount 2",
+        "PAY_AMT2",
         min_value=0.0,
         value=2000.0
     )
@@ -276,13 +342,13 @@ with col1:
 with col2:
 
     pay_amt3 = st.number_input(
-        "Payment Amount 3",
+        "PAY_AMT3",
         min_value=0.0,
         value=2000.0
     )
 
     pay_amt4 = st.number_input(
-        "Payment Amount 4",
+        "PAY_AMT4",
         min_value=0.0,
         value=2000.0
     )
@@ -291,13 +357,13 @@ with col2:
 with col3:
 
     pay_amt5 = st.number_input(
-        "Payment Amount 5",
+        "PAY_AMT5",
         min_value=0.0,
         value=2000.0
     )
 
     pay_amt6 = st.number_input(
-        "Payment Amount 6",
+        "PAY_AMT6",
         min_value=0.0,
         value=2000.0
     )
@@ -321,9 +387,9 @@ predict_button = st.button(
 
 if predict_button:
 
-    # --------------------------------------
+    # ======================================
     # Feature Engineering
-    # --------------------------------------
+    # ======================================
 
     avg_bill_amt = np.mean([
         bill_amt1,
@@ -343,14 +409,19 @@ if predict_button:
         pay_amt6
     ])
 
+
     # Avoid division by zero
+
     if avg_bill_amt > 0:
 
-        pay_to_bill_ratio = avg_pay_amt / avg_bill_amt
+        pay_to_bill_ratio = (
+            avg_pay_amt / avg_bill_amt
+        )
 
     else:
 
         pay_to_bill_ratio = 0
+
 
     max_delay = max([
         pay_0,
@@ -362,9 +433,9 @@ if predict_button:
     ])
 
 
-    # --------------------------------------
-    # Create Input DataFrame
-    # --------------------------------------
+    # ======================================
+    # Create Raw Customer Data
+    # ======================================
 
     input_data = pd.DataFrame({
 
@@ -425,16 +496,55 @@ if predict_button:
     })
 
 
-    # --------------------------------------
-    # Prediction
-    # --------------------------------------
+    # ======================================
+    # Handle Categorical Features
+    # ======================================
 
-    prediction = model.predict(input_data)[0]
+    input_data = pd.get_dummies(
+        input_data,
+        columns=[
+            "SEX",
+            "EDUCATION",
+            "MARRIAGE"
+        ],
+        dtype=int
+    )
 
 
-    # --------------------------------------
-    # Probability
-    # --------------------------------------
+    # ======================================
+    # Match Training Columns
+    # ======================================
+
+    input_data = input_data.reindex(
+        columns=feature_columns,
+        fill_value=0
+    )
+
+
+    # ======================================
+    # Make Prediction
+    # ======================================
+
+    try:
+
+        prediction = model.predict(input_data)[0]
+
+    except Exception as e:
+
+        st.error(
+            "The input columns do not match the trained model."
+        )
+
+        st.code(str(e))
+
+        st.stop()
+
+
+    # ======================================
+    # Default Probability
+    # ======================================
+
+    probability = None
 
     if hasattr(model, "predict_proba"):
 
@@ -442,13 +552,9 @@ if predict_button:
             input_data
         )[0][1]
 
-    else:
-
-        probability = None
-
 
     # ======================================
-    # Result
+    # Prediction Result
     # ======================================
 
     st.markdown("---")
@@ -458,43 +564,64 @@ if predict_button:
 
     if prediction == 1:
 
-        st.error("🔴 High Risk of Default")
+        st.error(
+            "🔴 Customer is predicted to DEFAULT"
+        )
 
         risk_level = "HIGH"
 
     else:
 
-        st.success("🟢 Low Risk of Default")
+        st.success(
+            "🟢 Customer is predicted NOT TO DEFAULT"
+        )
 
         risk_level = "LOW"
 
 
     # ======================================
-    # Probability
+    # Result Cards
+    # ======================================
+
+    col1, col2 = st.columns(2)
+
+
+    with col1:
+
+        st.metric(
+            "Risk Level",
+            risk_level
+        )
+
+
+    with col2:
+
+        if probability is not None:
+
+            st.metric(
+                "Default Probability",
+                f"{probability * 100:.2f}%"
+            )
+
+        else:
+
+            st.metric(
+                "Default Probability",
+                "Not Available"
+            )
+
+
+    # ======================================
+    # Probability Bar
     # ======================================
 
     if probability is not None:
 
-        default_probability = probability * 100
-
-        st.metric(
-            "Default Probability",
-            f"{default_probability:.2f}%"
-        )
+        st.subheader("Default Probability")
 
         st.progress(
             float(probability)
         )
-
-
-    # ======================================
-    # Risk Level
-    # ======================================
-
-    st.metric(
-        "Risk Level",
-        risk_level
-    )
 
 
     # ======================================
@@ -503,14 +630,14 @@ if predict_button:
 
     st.subheader("⚠ Risk Indicators")
 
-    indicators = []
+    risk_indicators = []
 
 
     # Recent repayment delay
 
     if pay_0 > 0:
 
-        indicators.append(
+        risk_indicators.append(
             "Recent repayment delay detected."
         )
 
@@ -519,65 +646,64 @@ if predict_button:
 
     if max_delay >= 2:
 
-        indicators.append(
-            "Significant repayment delay found in recent history."
+        risk_indicators.append(
+            "Significant repayment delay appears in the history."
         )
 
 
-    # Payment to bill ratio
+    # Payment behavior
 
     if pay_to_bill_ratio < 0.20:
 
-        indicators.append(
-            "Payments are low compared with the average bill amount."
+        risk_indicators.append(
+            "Average payment is low compared with the average bill."
         )
 
 
-    # Credit limit
+    # If no indicators
 
-    if limit_bal < 30000:
-
-        indicators.append(
-            "Credit limit is relatively low."
-        )
-
-
-    if len(indicators) == 0:
+    if len(risk_indicators) == 0:
 
         st.success(
-            "No major risk indicators detected from the entered information."
+            "No major risk indicators detected from the entered data."
         )
 
     else:
 
-        for indicator in indicators:
+        for indicator in risk_indicators:
 
             st.warning(indicator)
 
 
 # ==========================================
-# About Section
+# About Project
 # ==========================================
 
 st.markdown("---")
+
 
 with st.expander("ℹ️ About This Project"):
 
     st.write(
         """
-        This project predicts whether a credit card customer
-        is likely to default on their next payment.
+        Credit Card Default Risk Prediction is a machine
+        learning project that predicts whether a customer
+        is likely to default on their next credit card payment.
 
-        The model uses demographic information, repayment
-        history, billing history, and payment history.
+        The model uses:
 
-        Machine Learning Models used in the project:
+        • Customer demographic information
+        • Repayment history
+        • Billing history
+        • Payment history
+
+        Models used during the project:
 
         • Logistic Regression
         • Decision Tree
         • Random Forest
 
-        The models are evaluated using Stratified K-Fold
-        Cross-Validation.
+        Model evaluation is performed using Stratified
+        K-Fold Cross-Validation.
         """
     )
